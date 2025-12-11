@@ -1,5 +1,7 @@
-FROM eclipse-temurin:17-jdk AS build
-WORKDIR /app
-COPY target/usei-0.0.1-SNAPSHOT.jar app.jar
-EXPOSE 8082
-ENTRYPOINT ["java", "-jar", "app.jar"]
+FROM postgres:16
+
+ENV POSTGRES_USER=admin
+ENV POSTGRES_PASSWORD=12345
+ENV POSTGRES_DB=proyecto_usei
+
+COPY init.sql /docker-entrypoint-initdb.d/
