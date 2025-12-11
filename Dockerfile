@@ -1,25 +1,29 @@
-# ----- STAGE 1: Build con Maven -----
-FROM maven:3.9.4-eclipse-temurin-17 AS build
+# ------------ STAGE 1: COMPILAR MAVEN ----------------
 
+FROM maven:3.9.5-eclipse-temurin-17 AS builder
 WORKDIR /app
 
-# Copiamos pom.xml y descargamos dependencias primero
-COPY pom.xml .
+# Copiamos el pom.xml que está dentro de Backend/
+COPY Backend/pom.xml .
+
+# Descargar dependencias
 RUN mvn dependency:go-offline
 
-# Copiamos todo el proyecto
-COPY . .
+# Copiar el código fuente
+COPY Backend/src ./src
 
-# Generamos el jar
+# Compilar el proyecto
 RUN mvn clean package -DskipTests
 
-# ----- STAGE 2: Imagen final ligera -----
-FROM eclipse-temurin:17-jdk
 
+
+# ------------ STAGE 2: EJECUTAR SPRING BOOT ----------------
+
+FROM eclipse-temurin:17-jdk
 WORKDIR /app
 
-# Copiar el JAR generado desde el stage anterior
-COPY --from=build /app/target/*.jar app.jar
+# Copiar el jar compilado desde el stage 1
+COPY --from=builder /app/target/*.jar app.jar
 
 EXPOSE 8082
 
