@@ -187,8 +187,14 @@ CREATE TABLE H_Usuario (
     tx_user int  NOT NULL,
     CONSTRAINT H_Usuario_pk PRIMARY KEY (id_usuario)
 );
-
-
+-- Table: Log_Usuario
+CREATE TABLE Log_Usuario (
+    id_log serial  NOT NULL,
+    fecha_log timestamp  NOT NULL,
+    motivo varchar(150)  NOT NULL,
+    Usuario_id_usuario int  NOT NULL,
+    CONSTRAINT Log_Usuario_pk PRIMARY KEY (id_log)
+);
 -- Table: Noticias
 CREATE TABLE Noticias (
     id_noticia serial  NOT NULL,
@@ -563,7 +569,12 @@ INSERT INTO configuracion_seguridad (
     true   -- Configuration is active
 );
 
-
+-- Reference: Log_Usuario_Usuario (table: Log_Usuario)
+ALTER TABLE Log_Usuario ADD CONSTRAINT Log_Usuario_Usuario
+    FOREIGN KEY (Usuario_id_usuario)
+    REFERENCES Usuario (id_usuario)
+    NOT DEFERRABLE
+    INITIALLY IMMEDIATE;
 
 ALTER TABLE Contrasenia DROP COLUMN IF EXISTS contrasenia_id_pass;
 

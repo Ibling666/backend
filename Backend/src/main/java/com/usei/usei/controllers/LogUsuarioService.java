@@ -19,25 +19,28 @@ public class LogUsuarioService {
     }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void registrar(Usuario usuario, String motivo) {
+    public void registrarLogSeguridad(
+            Usuario usuario,
+            String motivo,        // LOGIN_OK, LOGIN_FAIL, etc.
+            String nivel,         // INFO, WARN, ERROR...
+            String mensaje,       // texto legible
+            String detalle        // JSON o texto extra (puede ser null)
+    ) {
         try {
-            if (usuario == null) {
-                System.err.println("⚠️ No se puede registrar log: usuario es null");
-                return;
-            }
-
             LogUsuario log = new LogUsuario(
                     usuario,
+                    "SEGURIDAD",    // tipo_log
+                    "AUTH",         // modulo (por ejemplo)
                     motivo,
-                    LocalDateTime.now()
+                    nivel,
+                    mensaje,
+                    detalle
             );
 
             logUsuarioDAO.save(log);
-            System.out.println("✅ Log guardado correctamente: " + motivo);
 
         } catch (Exception e) {
             e.printStackTrace();
-            System.err.println("❌ Error al registrar log: " + e.getMessage());
         }
     }
 }

@@ -425,21 +425,28 @@ public class UsuarioBL implements UsuarioService {
                 return;
             }
 
-            // Crear registro de log
-            LogUsuario log = new LogUsuario(
-                    usuario,
-                    motivo,
-                    java.time.LocalDateTime.now()
-            );
+            LogUsuario log = new LogUsuario();
+            log.setUsuario(usuario);
+            log.setFechaLog(java.time.LocalDateTime.now());
+
+            // Igual que en LogUsuarioService: ABM de usuario = seguridad
+            log.setTipoLog("SEGURIDAD");
+            log.setModulo("USUARIO");
+
+            log.setMotivo(motivo);       // "Creación de usuario", "Eliminación de usuario", etc.
+            log.setNivel("INFO");        // puedes cambiarlo según el caso si más adelante diferencias
+
+            log.setMensaje(motivo);
+            log.setDetalle(null);
 
             logUsuarioDAO.save(log);
-            System.out.println("Log registrado correctamente: " + motivo + " (Usuario ID: " + usuario.getIdUsuario() + ")");
+            System.out.println("Log registrado correctamente: "
+                    + motivo + " (Usuario ID: " + usuario.getIdUsuario() + ")");
 
         } catch (Exception e) {
             System.err.println("Error al registrar log de usuario: " + e.getMessage());
             e.printStackTrace();
         }
     }
-
 
 }
