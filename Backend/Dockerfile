@@ -1,10 +1,7 @@
-FROM eclipse-temurin:17-jdk
+FROM postgres:16
 
-WORKDIR /app
+ENV POSTGRES_USER=admin
+ENV POSTGRES_PASSWORD=12345
+ENV POSTGRES_DB=proyecto_usei
 
-# Usa el nombre REAL del jar que te genera Maven
-COPY target/usei-0.0.1-SNAPSHOT.jar app.jar
-
-EXPOSE 8080
-
-ENTRYPOINT ["java", "-jar", "app.jar"]
+COPY init.sql /docker-entrypoint-initdb.d/
