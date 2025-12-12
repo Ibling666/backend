@@ -8,22 +8,52 @@
  ```bash
  ./mvnw spring-boot:run
  ```
+## Cómo usar el Frontend :computer:
 
-## Cómo crear BD en Docker 
-1. Construir una imagen en base al documento docker, ubicado en el directorio "docerAndDataBase"
+This template should help get you started developing with Vue 3 in Vite.
 
-```
-docker build -t image-usei .
+## Recommended IDE Setup
+
+[VSCode](https://code.visualstudio.com/) + [Volar](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
+
+## Customize configuration
+
+See [Vite Configuration Reference](https://vitejs.dev/config/).
+
+## Project Setup
+
+```sh
+npm install
 ```
 
-2. Crear un contenedor en base a la imagen
+### Compile and Hot-Reload for Development
 
-```
-docker run -d -p 5433:5432 --name usei-cont image-usei
+```sh
+npm run dev
 ```
 
-3. Para correr el docker YA creado
+### Compile and Minify for Production
 
+```sh
+npm run build
 ```
-docker start usei-cont
+
+### Lint with [ESLint](https://eslint.org/)
+
+```sh
+npm run lint
 ```
+# Extra Libraries
+## FontAwesome Library
+```sh
+npm install @fortawesome/fontawesome-free
+```
+## Flickity (Carousel)
+```sh
+npm install flickity
+```
+## SweetAlert (Diseño para las alertas)
+```sh
+npm install sweetalert2
+```
+
