@@ -18,13 +18,10 @@ spring:
 
 
   datasource:
-    url: jdbc:postgresql://aws-1-us-east-1.pooler.supabase.com:5432/postgres
-    username: postgres.cgfeeibqfyxdrzkspmm
-    password: ABC.77720666
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
     driver-class-name: org.postgresql.Driver
-  profiles:
-    active: default
-
 
 
 
