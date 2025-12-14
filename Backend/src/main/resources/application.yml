@@ -1,0 +1,83 @@
+spring:
+  config:
+    import: optional:env
+  web:
+    resources:
+      #mostrar certificado del estudiante
+      static-locations: classpath:/static/, classpath:/static/documents/formatos/
+      cache:
+        period: 3600s
+
+  mvc:
+    throw-exception-if-no-handler-found: true
+
+  # web:
+  #   resources:
+  #     add-mappings: true
+
+
+
+  datasource:
+    url: jdbc:postgresql://db.cgfeeibqfvyxdrzkspmn.supabase.co:5432/postgres?sslmode=require
+    username: postgres
+    password: Eqm20,dla.25
+    driver-class-name: org.postgresql.Driver
+
+
+
+  jpa:
+    database-platform: org.hibernate.dialect.PostgreSQLDialect
+    hibernate:
+      ddl-auto: validate
+    show-sql: true
+    properties:
+      hibernate.jdbc.time_zone: America/La_Paz
+
+  # resources:
+  #   static-locations: classpath:/static/documents/  # Ruta para servir archivos estáticos
+  #   cache:
+  #     period: 3600s  # Cachea los archivos estáticos durante una hora
+
+  servlet:
+    multipart:
+      max-file-size: 100MB
+      max-request-size: 100MB
+
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  debug: true
+server:
+  port: ${PORT:8080}  # Cambia 8081 por el puerto que desees utilizar, puede ser 8081, 9000, etc.
+  time-zone: America/La_Paz
+jwt:
+  secret: USEI_SUPER_SECRET_KEY_2025_CAMBIA_ESTO_1234567890
+
+# Swagger configuration
+springfox:
+  documentation:
+    swagger-ui:
+      base-url: /swagger-ui
+    api-docs:
+      path: /v2/api-docs
+
+# Configuración adicional para Swagger
+swagger:
+  api-info:
+    title: "Documentación de la API de Proyecto USEI"
+    description: "Documentación generada automáticamente con Swagger para Proyecto USEI"
+    version: "1.0"
+
+servlet:
+  multipart:
+    max-file-size: 100MB
+    max-request-size: 100MB
