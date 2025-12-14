@@ -67,7 +67,7 @@ public class SecurityBL {
         System.out.println("=== CHECKING POLICY COMPLIANCE FOR USER: " + correo + " ===");
         boolean complies = passwordPolicyUtil.existingPasswordCompliesWithCurrentPolicy(c);
         System.out.println("Policy compliance result: " + complies);
-        
+
         if (!complies) {
             System.out.println("Password does not comply with current policies - forcing password change");
             System.out.println("User: " + correo + " (ID: " + u.getIdUsuario() + ")");
@@ -108,15 +108,15 @@ public class SecurityBL {
 
         // guardar la contraseña actual en H_Contrasenia
         hContraseniaDAO.insertHist(
-            actual.getIdPass(),
-            actual.getContrasenia(),
-            actual.getFechaCreacion(),
-            actual.getLongitud(),
-            actual.getComplejidad(),
-            actual.getIntentosRestantes(),
-            actual.getUltimoLog(),
-            LocalDateTime.now(),
-            u.getIdUsuario()
+                actual.getIdPass(),
+                actual.getContrasenia(),
+                actual.getFechaCreacion(),
+                actual.getLongitud(),
+                actual.getComplejidad(),
+                actual.getIntentosRestantes(),
+                actual.getUltimoLog(),
+                LocalDateTime.now(),
+                u.getIdUsuario()
         );
 
         // actualizar nueva contraseña
@@ -151,13 +151,13 @@ public class SecurityBL {
     @Transactional
     public LoginStatus loginEstudiante(com.usei.usei.models.Estudiante estudiante, String passwordPlano) {
         if (estudiante == null) return LoginStatus.CREDENCIALES;
-        
+
         // Check if account is blocked
         if (estudiante.getIntentosRestantes() <= 0) return LoginStatus.BLOQUEADO;
 
         // Validate password - Estudiante stores plain text password for now
         boolean ok = estudiante.getContrasena().equals(passwordPlano);
-        
+
         if (!ok) {
             // Decrement attempts and save
             int rest = Math.max(0, estudiante.getIntentosRestantes() - 1);
@@ -175,11 +175,11 @@ public class SecurityBL {
     @Transactional
     public void enforcePasswordPolicyUpdateForAllUsers() {
         System.out.println("Enforcing password policy update for all users...");
-        
+
         // Get all users and mark them for password change
         Iterable<Usuario> allUsers = usuarioService.findAll();
         int updatedCount = 0;
-        
+
         for (Usuario user : allUsers) {
             // Only mark users who currently have a password
             if (user.getContraseniaEntity() != null) {
@@ -188,7 +188,7 @@ public class SecurityBL {
                 updatedCount++;
             }
         }
-        
+
         System.out.println("Marked " + updatedCount + " users for mandatory password change due to policy update.");
     }
 }

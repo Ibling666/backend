@@ -15,43 +15,71 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
     private TokenGenerator tokenGenerator;
 
     @Override
-    public boolean preHandle(HttpServletRequest request, HttpServletResponse response, Object handler) throws Exception {
-        // Permitir OPTIONS (preflight CORS)
+    public boolean preHandle(HttpServletRequest request,
+                             HttpServletResponse response,
+                             Object handler) throws Exception {
+
+        // ---------------------------------------------------------
+        // 0) PRE-FLIGHT CORS
+        // ---------------------------------------------------------
         if ("OPTIONS".equalsIgnoreCase(request.getMethod())) {
+            response.setStatus(HttpServletResponse.SC_OK);
             return true;
         }
 
-        String path = request.getRequestURI();
+        final String path = request.getRequestURI();
+        final String method = request.getMethod();
 
-        // RUTAS PÚBLICAS (SIN TOKEN REQUERIDO)
-        
-        // Login y recuperación de contraseña
-        if (path.equals("/auth/login") || 
-            path.startsWith("/estudiante/enviarCodigoVerificacion") ||
-            path.startsWith("/usuario/enviarCodigoVerificacion")) {
+        // ---------------------------------------------------------
+        // 1) AUDITORÍA (solo mutaciones)
+        // ---------------------------------------------------------
+        boolean isMutation =
+                "POST".equalsIgnoreCase(method)
+                        || "PUT".equalsIgnoreCase(method)
+                        || "PATCH".equalsIgnoreCase(method)
+                        || "DELETE".equalsIgnoreCase(method);
+
+        request.setAttribute("auditEnabled", isMutation);
+
+        // ---------------------------------------------------------
+        // 2) RUTAS PÚBLICAS
+        // ---------------------------------------------------------
+
+        // Auth / login
+        if (path.startsWith("/auth/")
+                || path.startsWith("/usuario/enviarCodigoVerificacion")
+                || path.startsWith("/estudiante/enviarCodigoVerificacion")) {
             return true;
         }
 
-        // MÓDULO DE SEGURIDAD (ACCESO SIN TOKEN)
-        if (path.startsWith("/usuario") || 
-            path.startsWith("/rol")) {
-            return true; // Permite acceso sin validar token
+        // Auditoría pública
+        if (path.startsWith("/log-usuario/")) {
+            return true;
+        }
+
+        // Noticias públicas
+        if (path.startsWith("/noticia/")) {
+            return true;
         }
 
         // Recursos estáticos
-        if (path.startsWith("/documents/") || 
-            path.startsWith("/imagenes/") ||
-            path.equals("/noticia/carrusel")) {
+        if (path.startsWith("/documents/")
+                || path.startsWith("/imagenes/")
+                || path.equals("/favicon.ico")) {
             return true;
         }
 
-        // VALIDACIÓN DE TOKEN PARA OTROS MÓDULOS
-        
+        // ---------------------------------------------------------
+        // 3) VALIDACIÓN JWT
+        // ---------------------------------------------------------
         String authHeader = request.getHeader("Authorization");
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Token no proporcionado\",\"message\":\"Debe autenticarse para acceder a este recurso\"}");
+            response.getWriter().write(
+                    "{\"error\":\"UNAUTHORIZED\",\"message\":\"Token no proporcionado\"}"
+            );
             return false;
         }
 
@@ -59,11 +87,12 @@ public class JwtAuthInterceptor implements HandlerInterceptor {
         if (claims == null) {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"error\":\"Token inválido o expirado\",\"message\":\"Su sesión ha expirado, por favor inicie sesión nuevamente\"}");
+            response.getWriter().write(
+                    "{\"error\":\"UNAUTHORIZED\",\"message\":\"Token inválido o expirado\"}"
+            );
             return false;
         }
 
-        // Guardar datos del usuario en el request para uso posterior
         request.setAttribute("userId", claims.getBody().get("id"));
         request.setAttribute("userType", claims.getBody().get("type"));
         request.setAttribute("username", claims.getBody().get("username"));

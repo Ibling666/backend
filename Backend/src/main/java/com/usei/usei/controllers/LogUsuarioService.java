@@ -7,8 +7,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
-
 @Service
 public class LogUsuarioService {
 
@@ -18,29 +16,83 @@ public class LogUsuarioService {
         this.logUsuarioDAO = logUsuarioDAO;
     }
 
+    /**
+     * ✅ Método base (NO CAMBIAR): es el que ya usas en todo el sistema.
+     * Guarda el log en LogUsuario.
+     */
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public void registrarLogSeguridad(
+    public void registrarLog(
             Usuario usuario,
-            String motivo,        // LOGIN_OK, LOGIN_FAIL, etc.
+            String tipoLog,       // SEGURIDAD, SISTEMA, AUDITORIA, etc.
+            String modulo,        // "Módulo Gestión de Roles", "AUTH", etc.
+            String motivo,        // CREAR_ROL, SUBIR_CERTIFICADO...
             String nivel,         // INFO, WARN, ERROR...
             String mensaje,       // texto legible
-            String detalle        // JSON o texto extra (puede ser null)
+            String detalle        // texto/JSON extra
     ) {
         try {
             LogUsuario log = new LogUsuario(
                     usuario,
-                    "SEGURIDAD",    // tipo_log
-                    "AUTH",         // modulo (por ejemplo)
+                    tipoLog,
+                    modulo,
                     motivo,
                     nivel,
                     mensaje,
                     detalle
             );
-
             logUsuarioDAO.save(log);
-
         } catch (Exception e) {
             e.printStackTrace();
         }
+    }
+
+    /**
+     * ✅ Compatibilidad (NO CAMBIAR): si en otros lados llamabas a este método,
+     * sigue funcionando igual.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarLogSeguridad(
+            Usuario usuario,
+            String motivo,
+            String nivel,
+            String mensaje,
+            String detalle
+    ) {
+        registrarLog(usuario, "SEGURIDAD", "AUTH", motivo, nivel, mensaje, detalle);
+    }
+
+    // ==========================================================
+    // ✅ Helpers OPCIONALES (no afectan lo anterior)
+    // ==========================================================
+
+    /**
+     * Helper para auditoría/acciones de módulos (Roles, Usuarios, Certificados, etc.)
+     * Evita que repitas "SEGURIDAD" o "AUDITORIA" y el módulo a cada rato.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarLogModulo(
+            Usuario usuario,
+            String modulo,
+            String motivo,
+            String nivel,
+            String mensaje,
+            String detalle
+    ) {
+        registrarLog(usuario, "SEGURIDAD", modulo, motivo, nivel, mensaje, detalle);
+    }
+
+    /**
+     * Helper corto para logs tipo SISTEMA.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void registrarLogSistema(
+            Usuario usuario,
+            String modulo,
+            String motivo,
+            String nivel,
+            String mensaje,
+            String detalle
+    ) {
+        registrarLog(usuario, "SISTEMA", modulo, motivo, nivel, mensaje, detalle);
     }
 }

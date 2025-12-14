@@ -23,31 +23,36 @@ public class LoginLogService {
 
     @Transactional
     public void saveLogin(Long idUsuario, String motivo) {
-        // No hace SELECT: usa referencia perezosa
+        // compatibilidad con llamadas antiguas
+        saveLogin(idUsuario, motivo, "Evento de autenticación: " + motivo);
+    }
+
+    @Transactional
+    public void saveLogin(Long idUsuario, String motivo, String detalle) {
+        if (idUsuario == null) return;
+
+        // referencia perezosa
         Usuario usuarioRef = em.getReference(Usuario.class, idUsuario);
 
         LogUsuario log = new LogUsuario();
         log.setUsuario(usuarioRef);
         log.setFechaLog(LocalDateTime.now(ZoneId.of("America/La_Paz")));
 
-        // Como es login, lo tratamos como log de seguridad
-        log.setTipoLog("SEGURIDAD");     // SEGURIDAD / APLICACION
-        log.setModulo("AUTH");           // módulo: autenticación / login
+        log.setTipoLog("SEGURIDAD");
+        log.setModulo("AUTH");
 
-        // El "motivo" que ya le pasas (ej: "LOGIN_OK", "LOGIN_FAIL", "Inicio de sesión")
-        log.setMotivo(motivo);
+        String m = (motivo == null || motivo.isBlank()) ? "LOGIN" : motivo.trim();
+        log.setMotivo(m);
 
-        // Nivel básico: si quieres, puedes refinar esto luego
-        log.setNivel("INFO");            // o "WARN" si decides que algo es fallo
+        log.setNivel("INFO");
+        log.setMensaje(m);
 
-        // Mensaje legible (de momento igual que motivo)
-        log.setMensaje(motivo);
-
-        // Detalle extra (por ahora nada)
-        log.setDetalle(null);
+        // ✅ NUNCA null
+        String det = (detalle == null || detalle.isBlank())
+                ? "Acción de autenticación registrada."
+                : detalle.trim();
+        log.setDetalle(det);
 
         logRepo.save(log);
     }
-
-
 }

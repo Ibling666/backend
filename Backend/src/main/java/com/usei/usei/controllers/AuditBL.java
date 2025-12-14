@@ -1,6 +1,5 @@
 package com.usei.usei.controllers;
 
-import com.usei.usei.controllers.LoginLogService;
 import org.springframework.stereotype.Component;
 
 @Component
@@ -14,11 +13,12 @@ public class AuditBL {
 
     /** Registra login exitoso */
     public void registerLogin(Long idUsuario) {
-        loginLogService.saveLogin(idUsuario, "LOGIN");
+        loginLogService.saveLogin(idUsuario, "LOGIN", "Inicio de sesión exitoso");
     }
 
-    /** (Opcional) Registra eventos especiales del flujo de autenticación */
+    /** Registra eventos especiales del flujo de autenticación */
     public void registerEvent(Long idUsuario, String motivo) {
-        loginLogService.saveLogin(idUsuario, motivo);
+        // si no mandan detalle, al menos se guarda uno por defecto
+        loginLogService.saveLogin(idUsuario, motivo, "Evento de autenticación: " + motivo);
     }
 }

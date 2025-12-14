@@ -1,12 +1,11 @@
 package com.usei.usei.repositories;
 
-import org.springframework.data.jpa.repository.*;
-import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Repository;
-
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
+import org.springframework.data.jpa.repository.*;
+import org.springframework.data.repository.query.Param;
+import org.springframework.stereotype.Repository;
 
 @Repository
 public interface HContraseniaDAO extends JpaRepository<com.usei.usei.models.Contrasenia, Long> {

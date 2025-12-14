@@ -1,44 +1,52 @@
 package com.usei.usei.controllers;
 
-import java.io.File;
-import java.time.LocalDate;
-import java.util.List;
-import java.util.Optional;
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
 import java.security.SecureRandom;
+import java.time.Duration;
+import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.core.io.ClassPathResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.usei.usei.models.Contrasenia;
+import com.usei.usei.models.LogUsuario;
 import com.usei.usei.models.Rol;
 import com.usei.usei.models.Usuario;
 import com.usei.usei.repositories.ContraseniaDAO;
+import com.usei.usei.repositories.LogUsuarioDAO;
 import com.usei.usei.repositories.RolDAO;
 import com.usei.usei.repositories.UsuarioDAO;
 import com.usei.usei.util.PasswordPolicyUtil;
-import com.usei.usei.models.LogUsuario;
-import com.usei.usei.repositories.LogUsuarioDAO;
 
 import jakarta.mail.MessagingException;
-import jakarta.mail.internet.MimeMessage;
-import org.springframework.transaction.annotation.Propagation;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class UsuarioBL implements UsuarioService {
 
-    @Autowired private UsuarioDAO usuarioDAO;
-    @Autowired private RolDAO rolDAO;
-    @Autowired private ContraseniaDAO contraseniaDAO;
-    private final JavaMailSender mailSender;
-    private final PasswordEncoder passwordEncoder; // BCrypt
+        @Autowired private UsuarioDAO usuarioDAO;
+        @Autowired private RolDAO rolDAO;
+        @Autowired private ContraseniaDAO contraseniaDAO;
+        private final PasswordEncoder passwordEncoder; // BCrypt
     private String codigoVerificacion;
+        private final ObjectMapper objectMapper = new ObjectMapper();
+        private final HttpClient httpClient = HttpClient.newBuilder()
+            .connectTimeout(Duration.ofSeconds(10))
+            .build();
+
+        // Resend API key (from environment / config). Leave empty if not configured.
+        @org.springframework.beans.factory.annotation.Value("${spring.resend.apikey:}")
+        private String resendApiKey;
     @Autowired
     private LogUsuarioService logUsuarioService;
     @Autowired
@@ -46,10 +54,8 @@ public class UsuarioBL implements UsuarioService {
 
     @Autowired
     public UsuarioBL(UsuarioDAO usuarioDAO,
-                     JavaMailSender mailSender,
                      PasswordEncoder passwordEncoder) {
         this.usuarioDAO = usuarioDAO;
-        this.mailSender = mailSender;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -134,7 +140,9 @@ public class UsuarioBL implements UsuarioService {
                 }
             }
             Usuario saved = usuarioDAO.save(usuario);
-            registrarLog(saved, "Creación de usuario");
+            String motivo = "CREACION_USUARIO";
+            String detalle = "Creación de usuario desde ABM (alta inicial)";
+            registrarLog(saved, motivo, detalle);
             return saved;
 
         }
@@ -156,7 +164,11 @@ public class UsuarioBL implements UsuarioService {
             log.setUsuario(dummyUser);
         }
         logUsuarioDAO.saveAll(logs);
-        registrarLog(dummyUser, "Eliminación del usuario: " + usuario.getNombre() + " " + usuario.getApellido());
+        String motivo = "ELIMINACION_USUARIO";
+        String detalle = "Eliminación del usuario "
+                + usuario.getNombre() + " " + usuario.getApellido()
+                + " (id=" + usuario.getIdUsuario() + ") y reasignación de logs al usuario sistema (id=1)";
+        registrarLog(dummyUser, motivo, detalle);
         usuarioDAO.delete(usuario);
 
         System.out.println("✅ Usuario eliminado correctamente y logs reasignados a usuario sistema.");
@@ -182,7 +194,9 @@ public class UsuarioBL implements UsuarioService {
             u.setRol(usuario.getRolEntity().getNombreRol());
         }
         Usuario updated = usuarioDAO.save(u);
-        registrarLog(updated, "Actualización de usuario");
+        String motivo = "ACTUALIZACION_USUARIO";
+        String detalle = "Actualización de datos del usuario con id=" + updated.getIdUsuario();
+        registrarLog(updated, motivo, detalle);
         return updated;
 
     }
@@ -250,45 +264,45 @@ public class UsuarioBL implements UsuarioService {
     public String obtenerCodigoVerificacion() { return this.codigoVerificacion; }
 
     private void enviarCorreo(String to, String subject, String body) throws MessagingException {
+        // Use Resend API to send plain text email (from onboarding@resend.dev)
         try {
-            System.out.println("🔹 === EMAIL SENDING DEBUG ===");
-            System.out.println("📧 To: " + to);
-            System.out.println("📝 Subject: " + subject);
-            System.out.println("📄 Body length: " + (body != null ? body.length() : 0) + " characters");
-            
-            // For development/testing - skip SSL verification
-            System.setProperty("mail.smtp.ssl.trust", "*");
-            System.setProperty("mail.smtp.starttls.enable", "true");
-            System.setProperty("mail.smtp.ssl.checkserveridentity", "false");
-            
-            System.out.println("🔧 Creating MimeMessage...");
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true);
-            
-            helper.setTo(to);
-            helper.setSubject(subject);
-            helper.setText(body != null ? body : "", false); // Changed to false for plain text
-            helper.setFrom("pruebasu123@gmail.com");
-            
-            System.out.println("📤 Sending email via mailSender...");
-            mailSender.send(message);
-            
-            System.out.println("✅ Email sent successfully!");
-            System.out.println("🔹 === EMAIL SENDING COMPLETE ===");
-            
-        } catch (Exception e) {
-            // For development: log the error but don't fail the operation
-            System.err.println("❌ === EMAIL SENDING FAILED ===");
-            System.err.println("❌ Error type: " + e.getClass().getSimpleName());
-            System.err.println("❌ Error message: " + e.getMessage());
-            if (e.getCause() != null) {
-                System.err.println("❌ Root cause: " + e.getCause().getMessage());
+            System.out.println("🔹 === RESEND EMAIL DEBUG ===");
+            System.out.println("📧 To: " + to + " | Subject: " + subject);
+
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("from", "no-reply@correosusei.tkyo-laz.me");
+            payload.put("to", java.util.List.of(to));
+            payload.put("subject", subject);
+            payload.put("text", body != null ? body : "");
+
+            String json = objectMapper.writeValueAsString(payload);
+
+            HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(10))
+                    .POST(HttpRequest.BodyPublishers.ofString(json));
+
+            if (resendApiKey != null && !resendApiKey.isBlank()) {
+                reqBuilder.header("Authorization", "Bearer " + resendApiKey);
             }
-            System.err.println("❌ === EMAIL ERROR DETAILS ===");
+
+            HttpRequest request = reqBuilder.build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                System.out.println("✅ Resend email sent successfully (status=" + response.statusCode() + ")");
+            } else {
+                System.err.println("❌ Resend API returned status " + response.statusCode() + ", body: " + response.body());
+                throw new MessagingException("Failed to send email via Resend. Status: " + response.statusCode());
+            }
+
+        } catch (MessagingException me) {
+            throw me;
+        } catch (Exception e) {
+            System.err.println("❌ Error sending email via Resend: " + e.getMessage());
             e.printStackTrace();
-            
-            // In production, you would want to throw the exception:
-            // throw new MessagingException("Failed to send email: " + e.getMessage(), e);
+            throw new MessagingException("Error sending email via Resend: " + e.getMessage());
         }
     }
 
@@ -339,16 +353,8 @@ public class UsuarioBL implements UsuarioService {
                     nullSafe(usuario.getCi())
             );
 
-            MimeMessage message = mailSender.createMimeMessage();
-            MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
-
-            helper.setTo(usuario.getCorreo());
-            helper.setSubject("Credenciales de acceso - Sistema Encuesta a Tiempo de Graduación - USEI");
-
-            // ✅ Usar logo por URL pública
+            // Contenido HTML
             String logoUrl = "https://lpz.ucb.edu.bo/wp-content/uploads/2021/09/USEI.png";
-
-            // ✅ Contenido HTML
             String contenido = """
         <html>
         <body style="font-family: Arial, sans-serif; background-color:#f4f6f7; padding:20px; color:#333;">
@@ -385,11 +391,47 @@ public class UsuarioBL implements UsuarioService {
                     contraseniaGenerada
             );
 
-            helper.setText(contenido, true);
-            mailSender.send(message);
+            // Usar Resend API para enviar HTML
+            sendResendHtml(usuario.getCorreo(), "Credenciales de acceso - Sistema Encuesta a Tiempo de Graduación - USEI", contenido);
 
         } catch (Exception e) {
             throw new RuntimeException("Error al enviar credenciales: " + e.getMessage());
+        }
+    }
+
+    private void sendResendHtml(String to, String subject, String html) throws MessagingException {
+        try {
+            Map<String, Object> payload = new HashMap<>();
+            payload.put("from", "no-reply@correosusei.tkyo-laz.me");
+            payload.put("to", java.util.List.of(to));
+            payload.put("subject", subject);
+            payload.put("html", html != null ? html : "");
+
+            String json = objectMapper.writeValueAsString(payload);
+            HttpRequest.Builder reqBuilder = HttpRequest.newBuilder()
+                    .uri(URI.create("https://api.resend.com/emails"))
+                    .header("Content-Type", "application/json")
+                    .timeout(Duration.ofSeconds(10))
+                    .POST(HttpRequest.BodyPublishers.ofString(json));
+
+            if (resendApiKey != null && !resendApiKey.isBlank()) {
+                reqBuilder.header("Authorization", "Bearer " + resendApiKey);
+            }
+
+            HttpRequest request = reqBuilder.build();
+            HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
+
+            if (response.statusCode() >= 200 && response.statusCode() < 300) {
+                System.out.println("✅ Resend HTML email sent successfully (status=" + response.statusCode() + ")");
+            } else {
+                System.err.println("❌ Resend API returned status " + response.statusCode() + ", body: " + response.body());
+                throw new MessagingException("Failed to send HTML email via Resend. Status: " + response.statusCode());
+            }
+        } catch (MessagingException me) {
+            throw me;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new MessagingException("Error sending HTML email via Resend: " + e.getMessage());
         }
     }
 
@@ -418,7 +460,7 @@ public class UsuarioBL implements UsuarioService {
 
     //Metodo auxiliar para el manejo de logs en abm usuario
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    private void registrarLog(Usuario usuario, String motivo) {
+    private void registrarLog(Usuario usuario, String motivo, String detalle) {
         try {
             if (usuario == null) {
                 System.err.println("No se puede registrar log: usuario es null.");
@@ -437,7 +479,7 @@ public class UsuarioBL implements UsuarioService {
             log.setNivel("INFO");        // puedes cambiarlo según el caso si más adelante diferencias
 
             log.setMensaje(motivo);
-            log.setDetalle(null);
+            log.setDetalle(detalle);
 
             logUsuarioDAO.save(log);
             System.out.println("Log registrado correctamente: "

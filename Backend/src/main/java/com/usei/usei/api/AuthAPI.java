@@ -12,6 +12,9 @@ import org.springframework.beans.factory.annotation.Value; // <-- agregado
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import com.usei.usei.controllers.UsuarioService;
+import com.usei.usei.controllers.LogUsuarioService;
+
 
 import java.util.HashMap;
 import java.util.List;
@@ -30,7 +33,10 @@ public class AuthAPI {
     private CaptchaService captchaService;
     @Autowired
     private com.usei.usei.controllers.AuditBL auditBL;
-
+    @Autowired
+    private UsuarioService usuarioService;
+    @Autowired
+    private LogUsuarioService logUsuarioService;
 
     // banderas de configuración para el captcha
     @Value("${security.captcha.enabled:true}")
@@ -148,6 +154,36 @@ public class AuthAPI {
                     return ResponseEntity.status(status).body(policyResponse);
                 }
                 
+                    // 🔹 Registrar LOG de intento de login fallido (si existe usuario con ese correo)
+                    if (request.getCorreo() != null && !request.getCorreo().trim().isEmpty()) {
+                        usuarioService.findByCorreo(request.getCorreo().trim()).ifPresent(usuario -> {
+                            String motivo;
+                            String nivel = "WARN";
+
+                            if (bloqueado) {
+                                motivo = "LOGIN_BLOQUEADO";
+                                nivel = "ERROR";
+                            } else if (expired) {
+                                motivo = "LOGIN_CONTRASENA_EXPIRADA";
+                            } else if (politicaActualizada) {
+                                motivo = "LOGIN_POLITICA_ACTUALIZADA";
+                            } else {
+                                motivo = "LOGIN_FALLIDO";
+                            }
+
+                            String mensaje = message;  // el mismo que mandas al front
+                            String detalle = "Intento de login para el correo " + request.getCorreo().trim()
+                                    + " - HTTP " + statusCode;
+
+                            logUsuarioService.registrarLogSeguridad(
+                                    usuario,
+                                    motivo,
+                                    nivel,
+                                    mensaje,
+                                    detalle
+                            );
+                        });
+                    }
                 return ResponseEntity.status(status).body(response);
             }
             
@@ -219,6 +255,18 @@ public class AuthAPI {
             } catch (Exception auditEx) {
                 // No interrumpir la sesión si falla la auditoría
                 auditEx.printStackTrace();
+            }
+            if ("usuario".equalsIgnoreCase(tipo)) {
+                Long idUsuario = Long.valueOf(String.valueOf(data.get("id_usuario")));
+                usuarioService.findById(idUsuario).ifPresent(usuario -> {
+                    logUsuarioService.registrarLogSeguridad(
+                            usuario,
+                            "LOGIN_OK",                      // motivo
+                            "INFO",                          // nivel
+                            "Inicio de sesión correcto",     // mensaje
+                            "Login exitoso vía /auth/login para el correo " + usuario.getCorreo()
+                    );
+                });
             }
 
 
