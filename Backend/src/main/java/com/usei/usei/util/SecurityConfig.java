@@ -75,9 +75,9 @@ public class SecurityConfig {
                 "http://localhost:5173", // Desarrollo local
                 "https://usei-seguridad-back-production.up.railway.app", // Tu propio backend
                 // 👇 Agrega AQUÍ la URL principal que te dio Vercel (la corta)
-                "https://usei-seguridad-front.vercel.app",
+                "https://vercel.com/ibling666s-projects/front/E2BMyq4uCx6zshjstyLD2DANX8YS"
                 // Esta es la específica que tenías, puedes dejarla por si acaso:
-                "https://usei-seguridad-front-8yvz7pc4r-ignacios-projects-1b5e3921.vercel.app"));
+                ));
 
         // Métodos permitidos
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
